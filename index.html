@@ -3,159 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fitness & Nutrition Tracker</title>
+    <title>HealthFlow - Smart Tracker</title>
     <style>
-        :root { --primary: #6366f1; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-bottom: 100px; }
-        .card { background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
-        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-box { background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-align: center; }
-        .stat-val { font-size: 1.4rem; font-weight: bold; display: block; }
-        .stat-label { font-size: 0.8rem; opacity: 0.9; }
-        .list-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
-        .remove-btn { color: #ef4444; font-size: 0.8rem; border: none; background: none; width: auto; margin: 0; padding: 0 5px; }
+        :root {
+            --soft-bg: #fdfbf7;
+            --soft-blue: #e0f2fe;
+            --soft-mint: #ecfdf5;
+            --soft-pink: #fff1f2;
+            --primary: #6366f1;
+            --text: #334155;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: var(--soft-bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 50px;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 28px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            margin-bottom: 20px;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        /* פס תאריכים שבועי */
+        .week-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .day-btn {
+            background: white;
+            border: 1px solid #f1f5f9;
+            padding: 10px;
+            border-radius: 18px;
+            min-width: 45px;
+            text-align: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .day-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .stats-main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-circle {
+            background: var(--soft-blue);
+            padding: 20px;
+            border-radius: 24px;
+            text-align: center;
+        }
+
+        .macro-bar {
+            height: 8px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .macro-progress { height: 100%; transition: 0.5s; }
+
+        input, select, button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 16px;
+            border: 1px solid #f1f5f9;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        button { background: var(--primary); color: white; border: none; font-weight: 600; }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 1000; padding: 20px; box-sizing: border-box;
+            display: none; overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex; justify-content: space-between; padding: 12px;
+            background: #f8fafc; border-radius: 12px; margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="stats-grid">
-        <div class="stat-box">
-            <span class="stat-val" id="remaining">0</span>
-            <span class="stat-label">נותרו להיום</span>
-        </div>
-        <div class="stat-box" style="background: #10b981;">
-            <span class="stat-val" id="burned">0</span>
-            <span class="stat-label">נשרפו בכושר</span>
-        </div>
-Stat-box    </div>
-
-    <!-- הגדרות בסיס -->
-    <div class="card" id="setup-card">
-        <h2>⚙️ הגדרת מטרה יומית</h2>
-        <input type="number" id="daily-goal" placeholder="כמה קלוריות את רוצה לאכול ביום?" value="1800">
-        <button onclick="saveGoal()">שמור מטרה</button>
-    </div>
-
-    <!-- הוספת אוכל -->
-    <div class="card">
-        <h2>🍎 הוספת ארוחה</h2>
-        <input type="text" id="food-name" placeholder="מה אכלת?">
-        <input type="number" id="food-cal" placeholder="כמה קלוריות?">
-        <button onclick="addEntry('food')">הוסף לארוחה</button>
-    </div>
-
-    <!-- הוספת כושר -->
-    <div class="card">
-        <h2>💪 אימון וכושר</h2>
-        <select id="exercise-type" onchange="toggleManualExercise()">
-            <option value="manual">הזנה ידנית (קלוריות)</option>
-            <option value="walking">הליכה מהירה (שעה)</option>
-            <option value="running">ריצה (שעה)</option>
-            <option value="pilates">פילאטיס / יוגה (שעה)</option>
-            <option value="gym">אימון כוח (שעה)</option>
+    <!-- מסך הגדרות ראשוני (יוצג רק אם אין נתונים) -->
+    <div id="setup-modal" class="modal">
+        <h1 style="text-align:center;">ברוכה הבאה! 👋</h1>
+        <p style="text-align:center;">בואי נגדיר את היעדים שלך</p>
+        <input type="number" id="user-age" placeholder="גיל">
+        <input type="number" id="user-height" placeholder="גובה (ס״מ)">
+        <input type="number" id="user-weight" placeholder="משקל נוכחי (ק״ג)">
+        <select id="user-gender">
+            <option value="female">נקבה</option>
+            <option value="male">זכר</option>
         </select>
-        <input type="number" id="exercise-val" placeholder="כמה קלוריות שרפת?">
-        <button onclick="addEntry('exercise')" style="background: #10b981;">הוסף אימון</button>
+        <select id="user-goal">
+            <option value="lose">ירידה במשקל (חיטוב)</option>
+            <option value="maintain">שמירה על הקיים</option>
+            <option value="gain">עלייה במסה</option>
+        </select>
+        <button onclick="calculateAndSaveProfile()">התחלת מעקב</button>
     </div>
 
-    <!-- יומן יומי -->
+    <!-- ממשק האפליקציה -->
+    <div class="week-nav" id="week-nav"></div>
+
+    <div class="stats-main">
+        <div class="stat-circle">
+            <small>נותרו קלוריות</small>
+            <h2 id="view-remaining">0</h2>
+        </div>
+        <div class="stat-circle" style="background: var(--soft-mint);">
+            <small>חלבון שנאכל</small>
+            <h2 id="view-protein">0g</h2>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+        <h3>🍎 הוספת ארוחה (מחשבון מאקרו)</h3>
+        <input type="text" id="food-name" placeholder="שם המנה (למשל: ארוחת צהריים)">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <input type="number" id="food-cal" placeholder="קלוריות">
+            <input type="number" id="food-p" placeholder="חלבון (ג׳)">
+        </div>
+        <button onclick="addEntry()">הוספה ליומן</button>
+    </div>
+
     <div class="card">
-        <h2>📝 יומן פעילות</h2>
-        <div id="log-list"></div>
-        <button onclick="clearDay()" style="background: #94a3b8; margin-top: 15px;">איפוס יום חדש</button>
+        <h3>📊 סיכום שבועי/חודשי</h3>
+        <div id="summary-view">
+            <p style="font-size: 0.9rem; color: #64748b;">הנתונים נשמרים אוטומטית למשך 30 יום.</p>
+            <div id="history-log"></div>
+        </div>
     </div>
 
     <script>
-        let data = JSON.parse(localStorage.getItem('fitnessData')) || {
-            goal: 1800,
-            entries: []
-        };
+        let profile = JSON.parse(localStorage.getItem('userProfile'));
+        let history = JSON.parse(localStorage.getItem('userHistory')) || {};
+        let selectedDate = new Date().toISOString().split('T')[0];
 
-        const calorieTable = {
-            walking: 300,
-            running: 600,
-            pilates: 250,
-            gym: 400
-        };
+        // הצגת מסך הגדרות אם אין פרופיל
+        if (!profile) document.getElementById('setup-modal').style.display = 'block';
 
-        function toggleManualExercise() {
-            const type = document.getElementById('exercise-type').value;
-            const input = document.getElementById('exercise-val');
-            if (type !== 'manual') {
-                input.value = calorieTable[type];
-                input.disabled = true;
-            } else {
-                input.value = '';
-                input.disabled = false;
+        function calculateAndSaveProfile() {
+            const weight = parseFloat(document.getElementById('user-weight').value);
+            const height = parseFloat(document.getElementById('user-height').value);
+            const age = parseInt(document.getElementById('user-age').value);
+            const gender = document.getElementById('user-gender').value;
+            const goalType = document.getElementById('user-goal').value;
+
+            // נוסחת Mifflin-St Jeor
+            let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+            bmr = (gender === 'female') ? bmr - 161 : bmr + 5;
+            
+            let tdee = bmr * 1.2; // פעילות מינימלית
+            if (goalType === 'lose') tdee -= 500;
+            if (goalType === 'gain') tdee += 300;
+
+            profile = {
+                dailyCalories: Math.round(tdee),
+                dailyProtein: Math.round(weight * 1.8),
+                weight: weight
+            };
+
+            localStorage.setItem('userProfile', JSON.stringify(profile));
+            document.getElementById('setup-modal').style.display = 'none';
+            renderApp();
+        }
+
+        function renderApp() {
+            if (!profile) return;
+            
+            // יצירת פס תאריכים
+            let navHtml = '';
+            for(let i=6; i>=0; i--) {
+                let d = new Date();
+                d.setDate(d.getDate() - i);
+                let dateStr = d.toISOString().split('T')[0];
+                navHtml += `<div class="day-btn ${dateStr === selectedDate ? 'active' : ''}" onclick="setDate('${dateStr}')">
+                    ${d.getDate()}/${d.getMonth()+1}<br>
+                    ${['א','ב','ג','ד','ה','ו','ש'][d.getDay()]}
+                </div>`;
             }
-        }
+            document.getElementById('week-nav').innerHTML = navHtml;
 
-        function saveGoal() {
-            data.goal = parseInt(document.getElementById('daily-goal').value);
-            updateUI();
-        }
+            // חישוב נתונים ליום הנבחר
+            const dayData = history[selectedDate] || { entries: [] };
+            let eaten = 0, protein = 0;
+            let logHtml = '';
 
-        function addEntry(type) {
-            let name, cals;
-            if (type === 'food') {
-                name = document.getElementById('food-name').value || 'ארוחה';
-                cals = parseInt(document.getElementById('food-cal').value) || 0;
-                if (cals === 0) return;
-                data.entries.push({ name, cals: -cals, type: 'אוכל' });
-            } else {
-                const select = document.getElementById('exercise-type');
-                name = select.options[select.selectedIndex].text;
-                cals = parseInt(document.getElementById('exercise-val').value) || 0;
-                if (cals === 0) return;
-                data.entries.push({ name, cals, type: 'כושר' });
-            }
-            updateUI();
-            // Clear inputs
-            document.getElementById('food-name').value = '';
-            document.getElementById('food-cal').value = '';
-        }
-
-        function removeEntry(index) {
-            data.entries.splice(index, 1);
-            updateUI();
-        }
-
-        function clearDay() {
-            if (confirm('לאפס את כל הנתונים להיום?')) {
-                data.entries = [];
-                updateUI();
-            }
-        }
-
-        function updateUI() {
-            localStorage.setItem('fitnessData', JSON.stringify(data));
-            let totalEaten = 0;
-            let totalBurned = 0;
-            let html = '';
-
-            data.entries.forEach((entry, index) => {
-                if (entry.cals < 0) totalEaten += Math.abs(entry.cals);
-                else totalBurned += entry.cals;
-                
-                html += `
-                    <div class="list-item">
-                        <span><strong>${entry.type}:</strong> ${entry.name}</span>
-                        <span>${Math.abs(entry.cals)} קל' 
-                        <button class="remove-btn" onclick="removeEntry(${index})">✖</button></span>
-                    </div>`;
+            dayData.entries.forEach((e, idx) => {
+                eaten += e.cal;
+                protein += e.p;
+                logHtml += `<div class="history-item">
+                    <span>${e.name}</span>
+                    <span>${e.cal} קל' | ${e.p}ג' חלבון</span>
+                </div>`;
             });
 
-            const remaining = data.goal - totalEaten + totalBurned;
-            document.getElementById('remaining').innerText = remaining;
-            document.getElementById('burned').innerText = totalBurned;
-            document.getElementById('log-list').innerHTML = html || '<p style="text-align:center; color:#94a3b8;">אין פעילות היום</p>';
-            document.getElementById('daily-goal').value = data.goal;
+            document.getElementById('view-remaining').innerText = profile.dailyCalories - eaten;
+            document.getElementById('view-protein').innerText = protein + 'g / ' + profile.dailyProtein + 'g';
+            document.getElementById('history-log').innerHTML = logHtml || '<p>אין נתונים ליום זה</p>';
         }
 
-        updateUI();
+        function setDate(date) {
+            selectedDate = date;
+            renderApp();
+        }
+
+        function addEntry() {
+            const name = document.getElementById('food-name').value || 'ארוחה';
+            const cal = parseInt(document.getElementById('food-cal').value) || 0;
+            const p = parseInt(document.getElementById('food-p').value) || 0;
+
+            if (!history[selectedDate]) history[selectedDate] = { entries: [] };
+            history[selectedDate].entries.push({ name, cal, p });
+            
+            localStorage.setItem('userHistory', JSON.stringify(history));
+            renderApp();
+            
+            document.getElementById('food-name').value = '';
+            document.getElementById('food-cal').value = '';
+            document.getElementById('food-p').value = '';
+        }
+
+        renderApp();
     </script>
 </body>
 </html>
