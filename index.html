@@ -3,24 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HealthFlow Smart</title>
+    <title>HealthFlow Pro</title>
     <style>
         :root { --bg: #fdfbf7; --primary: #8b5cf6; --secondary: #10b981; --text: #1e293b; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 80px; }
         .card { background: white; padding: 20px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: white; cursor: pointer; font-weight: 600; }
-        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        /* ניווט תחתון */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; }
+        .nav-item { flex: 1; padding: 15px; text-align: center; font-size: 0.9rem; font-weight: 600; cursor: pointer; color: #94a3b8; }
+        .nav-item.active { color: var(--primary); border-top: 3px solid var(--primary); }
+
+        /* לשוניות ארוחה */
+        .meal-tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+        .m-tab { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; font-size: 0.85rem; text-align: center; }
+        .m-tab.active { background: var(--primary); color: white; }
+
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .stat-box { padding: 15px; border-radius: 18px; text-align: center; font-size: 0.9rem; }
-        input, select, button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 10px; border: 1px solid #f1f5f9; box-sizing: border-box; }
-        button.add-btn { background: var(--secondary); color: white; border: none; font-weight: 700; margin-top: 10px; }
-        .item-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f8fafc; font-size: 0.85rem; }
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:1000; padding:20px; display:none; overflow-y:auto; }
+        .stat-box { padding: 15px; border-radius: 18px; text-align: center; }
+        
+        input, select, button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 12px; border: 1px solid #f1f5f9; box-sizing: border-box; font-size: 1rem; }
+        .btn-add { background: var(--secondary); color: white; border: none; font-weight: 700; cursor: pointer; }
+        
+        .section { display: none; }
+        .section.active { display: block; }
+        
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:1000; padding:20px; display:none; }
     </style>
 </head>
 <body>
 
+    <!-- מסך הגדרות -->
     <div id="setup-modal" class="modal">
         <h2 style="text-align:center;">הגדרות פרופיל 🧬</h2>
         <input type="number" id="u-age" placeholder="גיל">
@@ -31,9 +44,10 @@
             <option value="maintain">שמירה על הקיים</option>
             <option value="gain">מסה (עלייה בשריר)</option>
         </select>
-        <button onclick="saveProfile()" class="add-btn">שמור וחשב המלצה</button>
+        <button onclick="saveProfile()" class="btn-add">שמור וחשב המלצה</button>
     </div>
 
+    <!-- סטטיסטיקה מהירה למעלה -->
     <div class="stats-grid">
         <div class="stat-box" style="background:#e0f2fe;">
             <small>נותרו להיום</small>
@@ -45,49 +59,59 @@
         </div>
     </div>
 
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('morning', this)">בוקר</button>
-        <button class="tab-btn" onclick="switchTab('noon', this)">צהריים</button>
-        <button class="tab-btn" onclick="switchTab('evening', this)">ערב</button>
-    </div>
-
-    <div class="card">
-        <h3 id="tab-title">ארוחת בוקר</h3>
-        <input type="text" id="item-name" placeholder="שם הפריט (למשל: ביצה / פתיתים)">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <input type="number" id="item-val" placeholder="כמות">
-            <select id="item-unit">
-                <option value="unit">יחידות</option>
-                <option value="spoon">כפות הגשה</option>
-                <option value="cup">כוסות (240 מ״ל)</option>
-                <option value="grams">גרם</option>
-            </select>
+    <!-- מסך ארוחות -->
+    <div id="meals-sec" class="section active">
+        <div class="meal-tabs">
+            <div class="m-tab active" onclick="switchMeal('morning', this)">בוקר</div>
+            <div class="m-tab" onclick="switchMeal('noon', this)">צהריים</div>
+            <div class="m-tab" onclick="switchMeal('evening', this)">ערב</div>
         </div>
-        <small style="color:#64748b;">* הערכים מחושבים אוטומטית לפי ממוצע</small>
-        <button class="add-btn" onclick="addItem()">הוסף לפריטים</button>
+        <div class="card">
+            <h3 id="meal-title">ארוחת בוקר</h3>
+            <input type="text" id="food-name" placeholder="שם הפריט">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <input type="number" id="food-val" placeholder="כמות">
+                <select id="food-unit">
+                    <option value="unit">יחידות</option>
+                    <option value="spoon">כפות</option>
+                    <option value="cup">כוסות</option>
+                    <option value="grams">גרם</option>
+                </select>
+            </div>
+            <button class="btn-add" onclick="addFood()">הוסף לפריטים</button>
+        </div>
+        <div class="card" id="food-list"></div>
     </div>
 
-    <div class="card">
-        <h4>פירוט הארוחה:</h4>
-        <div id="item-list"></div>
+    <!-- מסך אימונים -->
+    <div id="workout-sec" class="section">
+        <div class="card">
+            <h3>💪 אימון וכושר</h3>
+            <select id="work-type" onchange="toggleManualWork()">
+                <option value="walking">הליכה (שעה)</option>
+                <option value="running">ריצה (שעה)</option>
+                <option value="gym">אימון כוח (שעה)</option>
+                <option value="manual">הזנה ידנית (קלוריות)</option>
+            </select>
+            <input type="number" id="work-val" placeholder="קלוריות שנשרפו">
+            <button class="btn-add" style="background:var(--primary)" onclick="addWorkout()">הוסף אימון</button>
+        </div>
+        <div class="card" id="work-list"></div>
+    </div>
+
+    <!-- ניווט תחתון -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="showSection('meals', this)">🥗 ארוחות</div>
+        <div class="nav-item" onclick="showSection('workout', this)">🏋️ אימונים</div>
     </div>
 
     <script>
-        // בסיס נתונים קטן לממוצעים
-        const foodDB = {
-            "ביצה": { cal: 80, p: 7, unit: 'unit' },
-            "פתיתים": { cal: 50, p: 1.5, unit: 'spoon' }, // כף אחת
-            "אורז": { cal: 45, p: 1, unit: 'spoon' },
-            "חזה עוף": { cal: 165, p: 31, unit: 'grams' }, // ל-100 גרם
-            "מלפפון": { cal: 15, p: 0.5, unit: 'unit' },
-            "עגבניה": { cal: 20, p: 1, unit: 'unit' },
-            "לחם": { cal: 80, p: 3, unit: 'unit' }, // פרוסה
-            "כנפיים": { cal: 90, p: 8, unit: 'unit' } // יחידה
-        };
-
-        let currentTab = 'morning';
-        let profile = JSON.parse(localStorage.getItem('smart_pro'));
-        let diary = JSON.parse(localStorage.getItem('smart_diary')) || { morning: [], noon: [], evening: [] };
+        const foodDB = { "ביצה":{cal:80,p:7},"פתיתים":{cal:50,p:1.5},"אורז":{cal:45,p:1},"חזה עוף":{cal:165,p:31},"מלפפון":{cal:15,p:0.5},"לחם":{cal:80,p:3} };
+        const workDB = { walking:300, running:600, gym:400 };
+        
+        let currentMeal = 'morning';
+        let profile = JSON.parse(localStorage.getItem('h_pro'));
+        let diary = JSON.parse(localStorage.getItem('h_diary')) || { morning:[], noon:[], evening:[], workouts:[] };
 
         if (!profile) document.getElementById('setup-modal').style.display = 'block';
 
@@ -96,80 +120,74 @@
             const h = parseFloat(document.getElementById('u-height').value);
             const a = parseInt(document.getElementById('u-age').value);
             const goal = document.getElementById('u-goal').value;
-
-            // נוסחת Mifflin-St Jeor משופרת
-            let bmr = (10 * w) + (6.25 * h) - (5 * a) - 161; 
-            let tdee = bmr * 1.35; // רמת פעילות ממוצעת
-
-            if (goal === 'lose') tdee -= 400;
-            if (goal === 'gain') tdee += 300;
-
-            // הגנה - לא לרדת מתחת ל-1200 קלוריות
-            if (tdee < 1200) tdee = 1200;
-
-            profile = { cal: Math.round(tdee), p: Math.round(w * 1.6) };
-            localStorage.setItem('smart_pro', JSON.stringify(profile));
-            document.getElementById('setup-modal').style.display = 'none';
+            let tdee = ((10*w)+(6.25*h)-(5*a)-161)*1.35;
+            if(goal==='lose') tdee-=400; if(goal==='gain') tdee+=300;
+            profile = { cal: Math.round(Math.max(tdee, 1200)), p: Math.round(w*1.6) };
+            localStorage.setItem('h_pro', JSON.stringify(profile));
+            document.getElementById('setup-modal').style.display='none';
             render();
         }
 
-        function switchTab(tab, btn) {
-            currentTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        function showSection(sec, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(sec + '-sec').classList.add('active');
             btn.classList.add('active');
-            const titles = { morning: 'ארוחת בוקר', noon: 'ארוחת צהריים', evening: 'ארוחת ערב' };
-            document.getElementById('tab-title').innerText = titles[tab];
+        }
+
+        function switchMeal(m, btn) {
+            currentMeal = m;
+            document.querySelectorAll('.m-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('meal-title').innerText = {morning:'ארוחת בוקר',noon:'ארוחת צהריים',evening:'ארוחת ערב'}[m];
             render();
         }
 
-        function addItem() {
-            const name = document.getElementById('item-name').value;
-            const val = parseFloat(document.getElementById('item-val').value);
-            const unit = document.getElementById('item-unit').value;
+        function addFood() {
+            const name = document.getElementById('food-name').value;
+            const val = parseFloat(document.getElementById('food-val').value) || 0;
+            const unit = document.getElementById('food-unit').value;
+            const f = foodDB[name] || {cal:50, p:1}; 
+            let factor = (unit === 'grams') ? val/100 : val;
+            diary[currentMeal].push({ name, cal:Math.round(f.cal*factor), p:Math.round(f.p*factor) });
+            saveAndRender();
+        }
 
-            let cal = 0, p = 0;
-            const found = foodDB[name];
+        function addWorkout() {
+            const type = document.getElementById('work-type').value;
+            const cal = parseInt(document.getElementById('work-val').value) || workDB[type] || 0;
+            diary.workouts.push({ name: type, cal });
+            saveAndRender();
+        }
 
-            if (found) {
-                // חישוב חכם לפי בסיס הנתונים
-                let factor = val;
-                if (unit === 'grams' && found.unit !== 'grams') factor = val / 100;
-                cal = found.cal * factor;
-                p = found.p * factor;
-            } else {
-                // אם לא נמצא, נניח ערך כללי לפי יחידות (או שהמשתמש יזין ידנית בעתיד)
-                cal = val * 50; 
-                p = val * 2;
-            }
+        function toggleManualWork() {
+            const type = document.getElementById('work-type').value;
+            document.getElementById('work-val').value = workDB[type] || '';
+        }
 
-            diary[currentTab].push({ name, cal: Math.round(cal), p: Math.round(p), val, unit });
-            localStorage.setItem('smart_diary', JSON.stringify(diary));
+        function saveAndRender() {
+            localStorage.setItem('h_diary', JSON.stringify(diary));
             render();
         }
 
         function render() {
-            if (!profile) return;
-            let totalCal = 0, totalP = 0;
+            if(!profile) return;
+            let eaten=0, prot=0, burned=0;
+            Object.keys(diary).forEach(k => {
+                if(k==='workouts') diary[k].forEach(w => burned+=w.cal);
+                else diary[k].forEach(f => { eaten+=f.cal; prot+=f.p; });
+            });
+
+            document.getElementById('rem-cal').innerText = profile.cal - eaten + burned;
+            document.getElementById('cur-p').innerText = prot + " / " + profile.p;
+
+            // רשימות
+            let fHtml = ''; diary[currentMeal].forEach(i => fHtml += `<div>${i.name}: ${i.cal} קל'</div>`);
+            document.getElementById('food-list').innerHTML = fHtml || 'ארוחה ריקה';
             
-            // חישוב סך הכל יומי
-            Object.values(diary).forEach(list => {
-                list.forEach(i => { totalCal += i.cal; totalP += i.p; });
-            });
-
-            document.getElementById('rem-cal').innerText = profile.cal - totalCal;
-            document.getElementById('cur-p').innerText = totalP + " / " + profile.p;
-
-            // רינדור רשימת פריטים ללשונית הנוכחית
-            let html = '';
-            diary[currentTab].forEach(i => {
-                html += `<div class="item-row">
-                    <span>${i.name} (${i.val} ${i.unit === 'spoon' ? 'כפות' : 'יח\''})</span>
-                    <span><strong>${i.cal} קל'</strong></span>
-                </div>`;
-            });
-            document.getElementById('item-list').innerHTML = html || '<p style="text-align:center; color:#94a3b8;">הארוחה ריקה</p>';
+            let wHtml = ''; diary.workouts.forEach(i => wHtml += `<div>אימון: ${i.cal} קל'</div>`);
+            document.getElementById('work-list').innerHTML = wHtml || 'אין אימונים';
         }
-
         render();
     </script>
 </body>
