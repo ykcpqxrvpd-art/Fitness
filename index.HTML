@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>האתר של ליחי</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; background-color: #F5F3EF; }
+        * { box-sizing: border-box; }
+        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        input, select { width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid #EDEDED; margin-bottom: 10px; font-size: 16px; }
+        button { cursor: pointer; transition: opacity 0.2s; }
+        button:active { opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const C = {
+            sage: "#3D6B57", sageLight: "#E4F0EA", muted: "#8A8A8A",
+            sky: "#3A6FA8", amber: "#C97B2A", rose: "#B84C4C", line: "#EDEDED"
+        };
+
+        const todayKey = () => new Date().toISOString().split("T")[0];
+        const load = (k) => JSON.parse(localStorage.getItem(k) || "null");
+        const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+        function calcBMI(kg, cm) { return kg / (cm / 100) ** 2; }
+        function calcTargets(kg, cm, age, sex, goal) {
+            const bmr = sex === "f" ? 10 * kg + 6.25 * cm - 5 * age - 161 : 10 * kg + 6.25 * cm - 5 * age + 5;
+            const tdee = Math.round(bmr * 1.375);
+            const cal = goal === "lose" ? tdee - 500 : goal === "gain" ? tdee + 500 : tdee;
+            return {
+                cal: Math.max(cal, 1200),
+                protein: Math.round(kg * 1.8),
+                fat: Math.round((cal * 0.28) / 9),
+                carbs: Math.round((cal - (kg * 1.8 * 4) - (cal * 0.28)) / 4)
+            };
+        }
+
+        function App() {
+            const [screen, setScreen] = useState("loading");
+            const [activeTab, setActiveTab] = useState("home");
+            const [profile, setProfile] = useState(null);
+            const [targets, setTargets] = useState(null);
+            const [meals, setMeals] = useState([]);
+            const [weightOpen, setWeightOpen] = useState(false);
+            const [newWeight, setNewWeight] = useState("");
+
+            // טעינת נתונים ראשונית מהמכשיר[span_4](start_span)[span_4](end_span)
+            useEffect(() => {
+                const p = load("lihi_profile");
+                const m = (load("lihi_meals") || []).filter(x => x.date === todayKey());
+                if (p) {
+                    setProfile(p);
+                    setTargets(calcTargets(p.weight, p.height, p.age, p.sex, p.goal));
+                    setMeals(m);
+                    setScreen("home");
+                } else {
+                    setScreen("setup");
+                }
+            }, []);
+
+            // שמירת פרופיל חדש
+            const handleSetup = (e) => {
+                e.preventDefault();
+                const d = new FormData(e.target);
+                const p = {
+                    age: +d.get("age"), height: +d.get("height"), weight: +d.get("weight"),
+                    sex: d.get("sex"), goal: d.get("goal")
+                };
+                save("lihi_profile", p);
+                setProfile(p);
+                setTargets(calcTargets(p.weight, p.height, p.age, p.sex, p.goal));
+                setScreen("home");
+            };
+
+            // עדכון שקילה שבועית[span_5](start_span)[span_5](end_span)
+            const updateWeight = () => {
+                if (!newWeight) return;
+                const updated = { ...profile, weight: +newWeight };
+                save("lihi_profile", updated);
+                setProfile(updated);
+                setTargets(calcTargets(updated.weight, updated.height, updated.age, updated.sex, updated.goal));
+                setWeightOpen(false);
+                setNewWeight("");
+            };
+
+            if (screen === "loading") return <div style={{padding:50, textAlign:"center"}}>טוען...</div>;
+
+            if (screen === "setup") return (
+                <div style={{padding:30}}>
+                    <h1 style={{color:C.sage}}>ברוכה הבאה!</h1>
+                    <p>בואי נגדיר את הפרופיל שלך כדי לחשב יעדים:</p>
+                    <form onSubmit={handleSetup}>
+                        <input name="age" type="number" placeholder="גיל" required />
+                        <input name="height" type="number" placeholder="גובה (ס״מ)" required />
+                        <input name="weight" type="number" placeholder="משקל (ק״ג)" required />
+                        <select name="sex"><option value="f">אישה</option><option value="m">גבר</option></select>
+                        <select name="goal"><option value="lose">ירידה במשקל</option><option value="maintain">שמירה</option><option value="gain">עלייה במסה</option></select>
+                        <button type="submit" style={{width:"100%", padding:15, background:C.sage, color:"white", border:"none", borderRadius:12, fontWeight:700}}>התחלת עבודה</button>
+                    </form>
+                </div>
+            );
+
+            const totals = meals.reduce((a, m) => ({
+                cal: a.cal + m.cal, protein: a.protein + m.protein, fat: a.fat + m.fat, carbs: a.carbs + m.carbs
+            }), { cal: 0, protein: 0, fat: 0, carbs: 0 });
+
+            return (
+                <div style={{minHeight:"100vh", paddingBottom:80}}>
+                    {activeTab === "home" ? (
+                        <div style={{padding:20, paddingTop:50}}>
+                            <h1 style={{margin:0}}>היי ליחי 👋</h1>
+                            <p style={{color:C.muted, marginTop:5}}>הנה הנתונים שלך להיום:</p>
+
+                            <div className="card">
+                                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                                    <div>
+                                        <div style={{fontSize:12, color:C.muted}}>BMI נוכחי</div>
+                                        <div style={{fontSize:24, fontWeight:800}}>{calcBMI(profile.weight, profile.height).toFixed(1)}</div>
+                                    </div>
+                                    <button onClick={() => setWeightOpen(true)} style={{background:C.sageLight, color:C.sage, border:"none", padding:"8px 15px", borderRadius:10, fontWeight:700}}>שקילה שבועית</button>
+                                </div>
+                            </div>
+
+                            <div className="card">
+                                <h3 style={{margin:"0 0 10px"}}>סיכום קלוריות</h3>
+                                <div style={{fontSize:28, fontWeight:900, color: totals.cal > targets.cal ? C.rose : C.sage}}>
+                                    {totals.cal} / {targets.cal} <span style={{fontSize:14, fontWeight:400}}>kcal</span>
+                                </div>
+                                <div style={{height:10, background:C.line, borderRadius:5, margin:"15px 0", overflow:"hidden"}}>
+                                    <div style={{width:`${Math.min((totals.cal/targets.cal)*100, 100)}%`, height:"100%", background:C.sage}} />
+                                </div>
+                                <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, textAlign:"center"}}>
+                                    <div><div style={{fontSize:10, color:C.muted}}>חלבון</div><div style={{fontWeight:700}}>{totals.protein}/{targets.protein}g</div></div>
+                                    <div><div style={{fontSize:10, color:C.muted}}>פחמימה</div><div style={{fontWeight:700}}>{totals.carbs}/{targets.carbs}g</div></div>
+                                    <div><div style={{fontSize:10, color:C.muted}}>שומן</div><div style={{fontWeight:700}}>{totals.fat}/{targets.fat}g</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{padding:25, paddingTop:50}}>
+                            <h2 style={{marginBottom:20}}>💡 רעיונות לארוחות</h2>
+                            {[
+                                { n: "שקשוקה ירוקה", b: "ברזל ומגנזיום", t: "המון תרד ומנגולד", v: "גבוה" },
+                                { n: "טורטייה ספורטאים", b: "חלבון נקי", t: "אפשר דפי אורז", v: "בינוני" },
+                                { n: "פוקי בול", b: "שובע מירבי", t: "אטריות שעועית", v: "גבוה" },
+                                { n: "פיצה קוטג'", b: "פצצת חלבון", t: "בצק מקוטג' וביצה", v: "בינוני" },
+                                { n: "אבוקדו טוסט", b: "שומן בריא", t: "להוסיף ביצה מעל", v: "נמוך" }
+                            ].map((id, i) => (
+                                <div key={i} className="card" style={{borderRight:`5px solid ${C.sage}`}}>
+                                    <h3 style={{margin:0, color:C.sage}}>{id.n}</h3>
+                                    <p style={{margin:"5px 0", fontSize:14}}>{id.b}</p>
+                                    <p style={{margin:0, fontSize:12, color:C.muted}}>💡 {id.t} | 🥗 ירק: {id.v}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {weightOpen && (
+                        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", padding:20, zIndex:100}}>
+                            <div className="card" style={{width:"100%"}}>
+                                <h3>עדכון משקל שבועי</h3>
+                                <input type="number" placeholder="משקל נוכחי ב-ק״ג" value={newWeight} onChange={e => setNewWeight(e.target.value)} />
+                                <button onClick={updateWeight} style={{width:"100%", padding:12, background:C.sage, color:"white", border:"none", borderRadius:10, fontWeight:700}}>עדכני</button>
+                                <button onClick={() => setWeightOpen(false)} style={{width:"100%", marginTop:10, background:"none", border:"none", color:C.muted}}>ביטול</button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{position:"fixed", bottom:0, left:0, right:0, background:"white", display:"flex", padding:"15px 0", borderTop:`1px solid ${C.line}`, zIndex:10}}>
+                        <button onClick={() => setActiveTab("home")} style={{flex:1, border:"none", background:"none", color:activeTab==="home"?C.sage:C.muted, fontWeight:700, fontSize:16}}>🏠 בית</button>
+                        <button onClick={() => setActiveTab("ideas")} style={{flex:1, border:"none", background:"none", color:activeTab==="ideas"?C.sage:C.muted, fontWeight:700, fontSize:16}}>💡 רעיונות</button>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
